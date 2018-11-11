@@ -5,6 +5,8 @@ authors = ["Graeme Coupar <grambo@grambo.me.uk>"]
 
 [build-dependencies]
 bindgen = "0.42.2"
+cc = {version = "1.0", features = ["parallel"]}
+walkdir = "2"
 
 [dependencies]
 

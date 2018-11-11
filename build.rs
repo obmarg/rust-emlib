@@ -1,13 +1,51 @@
 extern crate bindgen;
+extern crate cc;
+extern crate walkdir;
 
 use std::env;
 use std::path::PathBuf;
+use walkdir::WalkDir;
 
 fn main() {
     // Tell cargo to tell rustc to link the system bzip2
     // shared library.
     //println!("cargo:rustc-link-lib=bz2");
+    for entry in WalkDir::new("vendor").into_iter().filter_map(|e| e.ok()) {
+        println!("cargo:rerun-if-changed={}", entry.path().display());
+    }
 
+    build_emlib_sources();
+    build_emlib_bindings();
+}
+
+fn build_emlib_sources() {
+    cc::Build::new()
+        .target("arm-none-eabihf")
+        .compiler("arm-none-eabi-gcc")
+        .include("vendor/emlib/inc")
+        .include("vendor/device/EFR32BG1P/Include")
+        .include("vendor/CMSIS/CMSIS/Include")
+        .define(
+            &board_define().expect("You must use one of the features to define a board"),
+            "1",
+        ).flag("-ffunction-sections")
+        .warnings(true)
+        .opt_level(2)
+        .debug(true)
+        .flag("-mthumb")
+        .flag("-mcpu=cortex-m4")
+        .flag("-fomit-frame-pointer")
+        .flag("-fno-short-enums")
+        .flag("-std=c99")
+        .flag("-mfpu=fpv4-sp-d16")
+        .flag("-mfloat-abi=hard")
+        .files(source_files())
+        .compile("emlib");
+
+    println!("cargo:rustc-link-lib=static=emlib");
+}
+
+fn build_emlib_bindings() {
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
@@ -15,7 +53,9 @@ fn main() {
         .clang_arg("-Ivendor/emlib/inc")
         .clang_arg("-Ivendor/device/EFR32BG1P/Include/")
         .clang_arg("-Ivendor/CMSIS/CMSIS/Include")
-        .clang_arg(board_define().expect("You must use one of the features to define a board"))
+        .clang_arg(
+            format!("-D{}=1", board_define().expect("You must use one of the features to define a board"))
+        )
         .clang_arg("--target=thumbv7em-none-eabihf")
         .clang_arg("-mcpu=cortex-m4")
         .clang_arg("-mthumb")
@@ -47,23 +87,41 @@ fn board_define() -> Option<String> {
     }
 
     #[cfg(feature = "efr32bg1p232f256gj43")]
-    return rv("-DEFR32BG1P232F256GJ43");
+    return rv("EFR32BG1P232F256GJ43");
     #[cfg(feature = "efr32bg1p232f256gm32")]
-    return rv("-DEFR32BG1P232F256GM32");
+    return rv("EFR32BG1P232F256GM32");
     #[cfg(feature = "efr32bg1p232f256gm48")]
-    return rv("-DEFR32BG1P232F256GM48");
+    return rv("EFR32BG1P232F256GM48");
     #[cfg(feature = "efr32bg1p233f256gm48")]
-    return rv("-DEFR32BG1P233F256GM48");
+    return rv("EFR32BG1P233F256GM48");
     #[cfg(feature = "efr32bg1p332f256gj43")]
-    return rv("-DEFR32BG1P332F256GJ43");
+    return rv("EFR32BG1P332F256GJ43");
     #[cfg(feature = "efr32bg1p332f256gm32")]
-    return rv("-DEFR32BG1P332F256GM32");
+    return rv("EFR32BG1P332F256GM32");
     #[cfg(feature = "efr32bg1p332f256gm48")]
-    return rv("-DEFR32BG1P332F256GM48");
+    return rv("EFR32BG1P332F256GM48");
     #[cfg(feature = "efr32bg1p333f256gm48")]
-    return rv("-DEFR32BG1P333F256GM48");
+    return rv("EFR32BG1P333F256GM48");
     #[cfg(feature = "efr32bg1p333f256im48")]
-    return rv("-DEFR32BG1P333F256IM48");
+    return rv("EFR32BG1P333F256IM48");
+}
 
-    return None;
+fn source_files() -> impl Iterator<Item = String> {
+    [
+        "em_gpio.c",
+        "em_adc.c",
+        "em_cmu.c",
+        "em_msc.c",
+        "em_cryotimer.c",
+        "em_rtcc.c",
+        "em_system.c",
+        "em_leuart.c",
+        "em_usart.c",
+        "em_ldma.c",
+        "em_letimer.c",
+        "em_wdog.c",
+        "em_rmu.c",
+    ]
+        .iter()
+        .map(|p| format!("vendor/emlib/src/{}", p))
 }
