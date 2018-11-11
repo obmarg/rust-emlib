@@ -3,4 +3,20 @@ name = "rust-emlib"
 version = "0.1.0"
 authors = ["Graeme Coupar <grambo@grambo.me.uk>"]
 
+[build-dependencies]
+bindgen = "0.42.2"
+
 [dependencies]
+
+[features]
+default = ["efr32bg1p233f256gm48"]
+
+efr32bg1p232f256gj43 = []
+efr32bg1p232f256gm32 = []
+efr32bg1p232f256gm48 = []
+efr32bg1p233f256gm48 = []
+efr32bg1p332f256gj43 = []
+efr32bg1p332f256gm32 = []
+efr32bg1p332f256gm48 = []
+efr32bg1p333f256gm48 = []
+efr32bg1p333f256im48 = []
