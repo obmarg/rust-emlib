@@ -10,7 +10,10 @@ pub trait LEUART {
 /// This struct represents LEUART0.
 ///
 /// There should only be one of these, exposed through the Peripherals struct.
-pub struct LEUART0 {}
+pub struct LEUART0 {
+    #[allow(dead_code)]
+    private: (),
+}
 
 impl LEUART for LEUART0 {
     unsafe fn get_ptr() -> *mut bindings::LEUART_TypeDef {
@@ -26,6 +29,10 @@ pub struct Peripherals {
     pub leuart0: LEUART0,
     // TODO: Need to make this a singleton
 }
+
+pub const PERIPHERALS: Peripherals = Peripherals {
+    leuart0: LEUART0 { private: () },
+};
 
 /// A serial interface for our LEUARTs
 pub struct Serial<Port> {
