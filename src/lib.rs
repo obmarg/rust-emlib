@@ -1,4 +1,4 @@
-extern crate core;
+#![no_std]
 extern crate embedded_hal as hal;
 extern crate nb;
 
