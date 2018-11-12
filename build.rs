@@ -32,6 +32,7 @@ fn build_emlib_sources() {
         .warnings(true)
         .opt_level(2)
         .debug(true)
+        .pic(false)
         .flag("-mthumb")
         .flag("-mcpu=cortex-m4")
         .flag("-fomit-frame-pointer")
