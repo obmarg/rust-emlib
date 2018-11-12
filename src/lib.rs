@@ -1,12 +1,10 @@
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-
 extern crate core;
+extern crate embedded_hal as hal;
+extern crate nb;
 
+mod bindings;
 mod ctypes;
-
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+pub mod leuart;
 
 #[cfg(test)]
 mod tests {

@@ -9,6 +9,8 @@ cc = {version = "1.0", features = ["parallel"]}
 walkdir = "2"
 
 [dependencies]
+embedded-hal = "0.2"
+nb = "0.1"
 
 [features]
 default = ["efr32bg1p233f256gm48"]

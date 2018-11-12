@@ -68,7 +68,7 @@ fn build_emlib_bindings() {
         .use_core()
     // We also need to configure a custom ctypes library as otherwise bindgen
     // tries to use std for that.
-        .ctypes_prefix("ctypes")
+        .ctypes_prefix("super::ctypes")
     // Finish the builder and generate the bindings.
         .generate()
     // Unwrap the Result and panic on failure.
