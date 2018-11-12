@@ -23,7 +23,7 @@ fn build_emlib_sources() {
         .target("arm-none-eabihf")
         .compiler("arm-none-eabi-gcc")
         .include("vendor/emlib/inc")
-        .include("vendor/device/EFR32BG1P/Include")
+        .include(board_include_path())
         .include("vendor/CMSIS/CMSIS/Include")
         .define(
             &board_define().expect("You must use one of the features to define a board"),
@@ -40,6 +40,7 @@ fn build_emlib_sources() {
         .flag("-mfpu=fpv4-sp-d16")
         .flag("-mfloat-abi=hard")
         .files(source_files())
+        .file(board_system_file())
         .compile("emlib");
 
     println!("cargo:rustc-link-lib=static=emlib");
@@ -51,7 +52,7 @@ fn build_emlib_bindings() {
     // the resulting bindings.
     let bindings = bindgen::Builder::default()
         .clang_arg("-Ivendor/emlib/inc")
-        .clang_arg("-Ivendor/device/EFR32BG1P/Include/")
+        .clang_arg(format!("-I{}", board_include_path()))
         .clang_arg("-Ivendor/CMSIS/CMSIS/Include")
         .clang_arg(
             format!("-D{}=1", board_define().expect("You must use one of the features to define a board"))
@@ -104,6 +105,37 @@ fn board_define() -> Option<String> {
     return rv("EFR32BG1P333F256GM48");
     #[cfg(feature = "efr32bg1p333f256im48")]
     return rv("EFR32BG1P333F256IM48");
+}
+
+fn board_system_file() -> String {
+    let device_fam = device_family().expect("You must use one of the features to define a board");
+    format!(
+        "vendor/device/{}/Source/system_{}.c",
+        device_fam,
+        device_fam.to_lowercase()
+    )
+}
+
+fn board_include_path() -> String {
+    let device_fam = device_family().expect("You must use one of the features to define a board");
+    format!("vendor/device/{}/Include", device_fam)
+}
+
+fn device_family() -> Option<String> {
+    if cfg!(feature = "efr32bg1p232f256gj43")
+        || cfg!(feature = "efr32bg1p232f256gm32")
+        || cfg!(feature = "efr32bg1p232f256gm48")
+        || cfg!(feature = "efr32bg1p233f256gm48")
+        || cfg!(feature = "efr32bg1p332f256gj43")
+        || cfg!(feature = "efr32bg1p332f256gm32")
+        || cfg!(feature = "efr32bg1p332f256gm48")
+        || cfg!(feature = "efr32bg1p333f256gm48")
+        || cfg!(feature = "efr32bg1p333f256im48")
+    {
+        return Some("EFR32BG1P".to_string());
+    }
+
+    return None;
 }
 
 fn source_files() -> impl Iterator<Item = String> {
