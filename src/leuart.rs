@@ -27,12 +27,31 @@ impl LEUART for LEUART0 {
 /// leuart peripherals wherever they need to go
 pub struct Peripherals {
     pub leuart0: LEUART0,
-    // TODO: Need to make this a singleton
+    // TODO: Need to make this a singleton somehow...
 }
 
-pub const PERIPHERALS: Peripherals = Peripherals {
-    leuart0: LEUART0 { private: () },
-};
+static mut GOT_PERIPHERALS: bool = false;
+
+impl Peripherals {
+    /// Gets the LEUART Peripherals, if they haven't already been got.
+    ///
+    /// This function is unsafe to be run in a threaded/interrupt context.
+    ///
+    /// Ideally it should be called at the start of a program to initialise
+    /// things.
+    pub unsafe fn get() -> Option<Peripherals> {
+        // This could be unsafe if we had threads or this was called from an
+        // interrupt.  So don't do that.
+        if GOT_PERIPHERALS {
+            return None;
+        }
+        GOT_PERIPHERALS = true;
+
+        Some(Peripherals {
+            leuart0: LEUART0 { private: () },
+        })
+    }
+}
 
 /// A serial interface for our LEUARTs
 pub struct Serial<Port> {
