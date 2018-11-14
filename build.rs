@@ -15,44 +15,47 @@ fn main() {
     }
 
     build_emlib_sources();
-    build_emlib_bindings();
+    build_emdrv_sources();
+    build_bindings();
 }
 
 fn build_emlib_sources() {
-    cc::Build::new()
-        .target("arm-none-eabihf")
-        .compiler("arm-none-eabi-gcc")
-        .include("vendor/emlib/inc")
-        .include(board_include_path())
-        .include("vendor/CMSIS/CMSIS/Include")
-        .define(
-            &board_define().expect("You must use one of the features to define a board"),
-            "1",
-        ).flag("-ffunction-sections")
-        .warnings(true)
-        .opt_level(2)
-        .debug(true)
-        .pic(false)
-        .flag("-mthumb")
-        .flag("-mcpu=cortex-m4")
-        .flag("-fomit-frame-pointer")
-        .flag("-fno-short-enums")
-        .flag("-std=c99")
-        .flag("-mfpu=fpv4-sp-d16")
-        .flag("-mfloat-abi=hard")
-        .files(source_files())
+    compiler()
+        .files(emlib_source_files())
         .file(board_system_file())
         .compile("emlib");
 
     println!("cargo:rustc-link-lib=static=emlib");
 }
 
-fn build_emlib_bindings() {
+fn build_emdrv_sources() {
+    compiler()
+        .include("vendor/emdrv/config")
+        .include("vendor/emdrv/common/inc")
+        .include("vendor/emdrv/dmadrv/inc")
+        .include("vendor/emdrv/spidrv/inc")
+        .include("vendor/emdrv/uartdrv/inc")
+        .include("vendor/emdrv/rtcdrv/inc")
+        .include("vendor/emdrv/gpiointerrupt/inc")
+        .files(emdrv_source_files())
+        .compile("emdrv");
+
+    println!("cargo:rustc-link-lib=static=emdrv");
+}
+
+fn build_bindings() {
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
-    let bindings = bindgen::Builder::default()
+    let builder = bindgen::Builder::default()
         .clang_arg("-Ivendor/emlib/inc")
+        .clang_arg("-Ivendor/emdrv/config")
+        .clang_arg("-Ivendor/emdrv/common/inc")
+        .clang_arg("-Ivendor/emdrv/dmadrv/inc")
+        .clang_arg("-Ivendor/emdrv/spidrv/inc")
+        .clang_arg("-Ivendor/emdrv/uartdrv/inc")
+        .clang_arg("-Ivendor/emdrv/rtcdrv/inc")
+        .clang_arg("-Ivendor/emdrv/gpiointerrupt/inc")
         .clang_arg(format!("-I{}", board_include_path()))
         .clang_arg("-Ivendor/CMSIS/CMSIS/Include")
         .clang_arg(
@@ -70,11 +73,9 @@ fn build_emlib_bindings() {
         .use_core()
     // We also need to configure a custom ctypes library as otherwise bindgen
     // tries to use std for that.
-        .ctypes_prefix("super::ctypes")
-    // Finish the builder and generate the bindings.
-        .generate()
-    // Unwrap the Result and panic on failure.
-        .expect("Unable to generate bindings");
+        .ctypes_prefix("super::ctypes");
+
+    let bindings = builder.generate().expect("Unable to generate bindings");
 
     // Write the bindings to the $OUT_DIR/bindings.rs file.
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
@@ -108,6 +109,33 @@ fn board_define() -> Option<String> {
     return rv("EFR32BG1P333F256IM48");
 }
 
+fn compiler() -> cc::Build {
+    let mut cc = cc::Build::new();
+
+    cc.target("arm-none-eabihf")
+        .compiler("arm-none-eabi-gcc")
+        .include("vendor/emlib/inc")
+        .include(board_include_path())
+        .include("vendor/CMSIS/CMSIS/Include")
+        .define(
+            &board_define().expect("You must use one of the features to define a board"),
+            "1",
+        ).flag("-ffunction-sections")
+        .warnings(true)
+        .opt_level(2)
+        .debug(true)
+        .pic(false)
+        .flag("-mthumb")
+        .flag("-mcpu=cortex-m4")
+        .flag("-fomit-frame-pointer")
+        .flag("-fno-short-enums")
+        .flag("-std=c99")
+        .flag("-mfpu=fpv4-sp-d16")
+        .flag("-mfloat-abi=hard");
+
+    return cc
+}
+
 fn board_system_file() -> String {
     let device_fam = device_family().expect("You must use one of the features to define a board");
     format!(
@@ -139,7 +167,7 @@ fn device_family() -> Option<String> {
     return None;
 }
 
-fn source_files() -> impl Iterator<Item = String> {
+fn emlib_source_files() -> impl Iterator<Item = String> {
     [
         "em_gpio.c",
         "em_adc.c",
@@ -157,4 +185,16 @@ fn source_files() -> impl Iterator<Item = String> {
     ]
         .iter()
         .map(|p| format!("vendor/emlib/src/{}", p))
+}
+
+fn emdrv_source_files() -> impl Iterator<Item = String> {
+    [
+        "spidrv/src/spidrv.c",
+        "uartdrv/src/uartdrv.c",
+        "dmadrv/src/dmadrv.c",
+        "rtcdrv/src/rtcdriver.c",
+        "gpiointerrupt/src/gpiointerrupt.c",
+    ]
+        .iter()
+        .map(|p| format!("vendor/emdrv/{}", p))
 }

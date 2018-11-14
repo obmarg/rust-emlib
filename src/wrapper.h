@@ -11,3 +11,5 @@
 #include "em_letimer.h"
 #include "em_wdog.h"
 #include "em_rmu.h"
+
+#include "spidrv.h"
