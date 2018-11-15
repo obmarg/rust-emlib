@@ -6,6 +6,7 @@ mod bindings;
 mod ctypes;
 pub mod leuart;
 pub mod peripherals;
+pub mod usart;
 
 #[cfg(test)]
 mod tests {

@@ -3,18 +3,11 @@ use super::{hal, nb};
 use super::bindings;
 
 pub struct LEUART {
-    ptr: *mut bindings::LEUART_TypeDef
-}
-
-impl LEUART {
-    pub(crate) fn new(ptr: *mut bindings::LEUART_TypeDef) -> LEUART {
-        LEUART {ptr: ptr}
-    }
+    pub(crate) ptr: *mut bindings::LEUART_TypeDef,
 }
 
 /// A serial interface for our LEUARTs
 pub struct Serial {
-    #[allow(dead_code)]
     leuart: LEUART,
 }
 
@@ -85,8 +78,7 @@ pub enum Error {
     Overrun,
 }
 
-impl hal::serial::Read<u8> for Serial
-{
+impl hal::serial::Read<u8> for Serial {
     type Error = Error;
 
     fn read(&mut self) -> nb::Result<u8, Error> {
@@ -99,8 +91,7 @@ impl hal::serial::Read<u8> for Serial
     }
 }
 
-impl hal::serial::Write<u8> for Serial
-{
+impl hal::serial::Write<u8> for Serial {
     type Error = Error;
 
     fn flush(&mut self) -> nb::Result<(), Error> {

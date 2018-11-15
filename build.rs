@@ -133,7 +133,7 @@ fn compiler() -> cc::Build {
         .flag("-mfpu=fpv4-sp-d16")
         .flag("-mfloat-abi=hard");
 
-    return cc
+    return cc;
 }
 
 fn board_system_file() -> String {
