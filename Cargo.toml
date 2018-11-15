@@ -2,11 +2,13 @@
 name = "rust-emlib"
 version = "0.1.0"
 authors = ["Graeme Coupar <grambo@grambo.me.uk>"]
+links = "emlib"
 
 [build-dependencies]
 bindgen = "0.42.2"
 cc = {version = "1.0", features = ["parallel"]}
 walkdir = "2"
+dunce = "0.1.1"
 
 [dependencies]
 embedded-hal = "0.2"

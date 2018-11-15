@@ -1,5 +1,6 @@
 extern crate bindgen;
 extern crate cc;
+extern crate dunce;
 extern crate walkdir;
 
 use std::env;
@@ -14,6 +15,7 @@ fn main() {
         println!("cargo:rerun-if-changed={}", entry.path().display());
     }
 
+    print_vendor_paths();
     build_emlib_sources();
     build_emdrv_sources();
     build_bindings();
@@ -58,21 +60,21 @@ fn build_bindings() {
         .clang_arg("-Ivendor/emdrv/gpiointerrupt/inc")
         .clang_arg(format!("-I{}", board_include_path()))
         .clang_arg("-Ivendor/CMSIS/CMSIS/Include")
-        .clang_arg(
-            format!("-D{}=1", board_define().expect("You must use one of the features to define a board"))
-        )
-        .clang_arg("--target=thumbv7em-none-eabihf")
+        .clang_arg(format!(
+            "-D{}=1",
+            board_define().expect("You must use one of the features to define a board")
+        )).clang_arg("--target=thumbv7em-none-eabihf")
         .clang_arg("-mcpu=cortex-m4")
         .clang_arg("-mthumb")
         .clang_arg("-mfloat-abi=hard")
-    // The input header we would like to generate
-    // bindings for.
+        // The input header we would like to generate
+        // bindings for.
         .header("src/wrapper.h")
-    // We need to use this in no_std projects, so don't use
-    // anything in core.
+        // We need to use this in no_std projects, so don't use
+        // anything in core.
         .use_core()
-    // We also need to configure a custom ctypes library as otherwise bindgen
-    // tries to use std for that.
+        // We also need to configure a custom ctypes library as otherwise bindgen
+        // tries to use std for that.
         .ctypes_prefix("super::ctypes");
 
     let bindings = builder.generate().expect("Unable to generate bindings");
@@ -82,6 +84,37 @@ fn build_bindings() {
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
+}
+
+fn print_vendor_paths() {
+    println!(
+        "cargo:emlib={}",
+        dunce::canonicalize(PathBuf::from("vendor/emlib"))
+            .unwrap()
+            .to_str()
+            .unwrap()
+    );
+    println!(
+        "cargo:emdrv={}",
+        dunce::canonicalize(PathBuf::from("vendor/emdrv"))
+            .unwrap()
+            .to_str()
+            .unwrap()
+    );
+    println!(
+        "cargo:device={}",
+        dunce::canonicalize(PathBuf::from("vendor/device"))
+            .unwrap()
+            .to_str()
+            .unwrap()
+    );
+    println!(
+        "cargo:cmsis={}",
+        dunce::canonicalize(PathBuf::from("vendor/cmsis"))
+            .unwrap()
+            .to_str()
+            .unwrap()
+    );
 }
 
 fn board_define() -> Option<String> {
@@ -133,7 +166,7 @@ fn compiler() -> cc::Build {
         .flag("-mfpu=fpv4-sp-d16")
         .flag("-mfloat-abi=hard");
 
-    return cc
+    return cc;
 }
 
 fn board_system_file() -> String {
@@ -182,6 +215,7 @@ fn emlib_source_files() -> impl Iterator<Item = String> {
         "em_letimer.c",
         "em_wdog.c",
         "em_rmu.c",
+        "em_emu.c",
     ]
         .iter()
         .map(|p| format!("vendor/emlib/src/{}", p))

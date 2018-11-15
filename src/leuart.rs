@@ -21,7 +21,6 @@ impl LEUART for LEUART0 {
     }
 }
 
-
 /// Peripherals contains all the LEUART peripherals.
 ///
 /// Users should get an instance of this and then distribute the individual
