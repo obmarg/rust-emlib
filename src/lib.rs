@@ -5,6 +5,7 @@ extern crate nb;
 mod bindings;
 mod ctypes;
 pub mod leuart;
+pub mod peripherals;
 
 #[cfg(test)]
 mod tests {
