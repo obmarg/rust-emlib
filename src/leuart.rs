@@ -21,6 +21,7 @@ impl LEUART for LEUART0 {
     }
 }
 
+
 /// Peripherals contains all the LEUART peripherals.
 ///
 /// Users should get an instance of this and then distribute the individual
@@ -173,6 +174,8 @@ where
         }
     }
 }
+
+impl<Port> hal::blocking::serial::write::Default<u8> for Serial<Port> where Port: LEUART {}
 
 #[cfg(test)]
 mod tests {
