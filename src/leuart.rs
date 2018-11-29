@@ -2,61 +2,13 @@ use super::{hal, nb};
 
 use super::bindings;
 
-/// This trait lets us get at the emlib LEUART type for a struct.
-pub trait LEUART {
-    unsafe fn get_ptr() -> *mut bindings::LEUART_TypeDef;
-}
-
-/// This struct represents LEUART0.
-///
-/// There should only be one of these, exposed through the Peripherals struct.
-pub struct LEUART0 {
-    #[allow(dead_code)]
-    private: (),
-}
-
-impl LEUART for LEUART0 {
-    unsafe fn get_ptr() -> *mut bindings::LEUART_TypeDef {
-        return bindings::LEUART0_BASE as *mut bindings::LEUART_TypeDef;
-    }
-}
-
-/// Peripherals contains all the LEUART peripherals.
-///
-/// Users should get an instance of this and then distribute the individual
-/// leuart peripherals wherever they need to go
-pub struct Peripherals {
-    pub leuart0: LEUART0,
-    // TODO: Need to make this a singleton somehow...
-}
-
-static mut GOT_PERIPHERALS: bool = false;
-
-impl Peripherals {
-    /// Gets the LEUART Peripherals, if they haven't already been got.
-    ///
-    /// This function is unsafe to be run in a threaded/interrupt context.
-    ///
-    /// Ideally it should be called at the start of a program to initialise
-    /// things.
-    pub unsafe fn get() -> Option<Peripherals> {
-        // This could be unsafe if we had threads or this was called from an
-        // interrupt.  So don't do that.
-        if GOT_PERIPHERALS {
-            return None;
-        }
-        GOT_PERIPHERALS = true;
-
-        Some(Peripherals {
-            leuart0: LEUART0 { private: () },
-        })
-    }
+pub struct LEUART {
+    pub(crate) ptr: *mut bindings::LEUART_TypeDef,
 }
 
 /// A serial interface for our LEUARTs
-pub struct Serial<Port> {
-    #[allow(dead_code)]
-    port: Port,
+pub struct Serial {
+    leuart: LEUART,
 }
 
 /// Controls the status of a LEUART
@@ -87,14 +39,14 @@ pub enum StopBits {
     Two,
 }
 
-impl Serial<LEUART0> {
+impl Serial {
     pub fn new(
-        port: LEUART0,
+        leuart: LEUART,
         baud_rate: u32,
         status: Status,
         parity: Parity,
         stop_bits: StopBits,
-    ) -> Serial<LEUART0> {
+    ) -> Serial {
         let init = bindings::LEUART_Init_TypeDef {
             baudrate: baud_rate,
             enable: match status {
@@ -115,8 +67,8 @@ impl Serial<LEUART0> {
             refFreq: 0,
             databits: bindings::LEUART_Databits_TypeDef_leuartDatabits8,
         };
-        unsafe { bindings::LEUART_Init(LEUART0::get_ptr(), &init) }
-        Serial { port: port }
+        unsafe { bindings::LEUART_Init(leuart.ptr, &init) }
+        Serial { leuart: leuart }
     }
 }
 
@@ -126,33 +78,25 @@ pub enum Error {
     Overrun,
 }
 
-impl<Port> hal::serial::Read<u8> for Serial<Port>
-where
-    Port: LEUART,
-{
+impl hal::serial::Read<u8> for Serial {
     type Error = Error;
 
     fn read(&mut self) -> nb::Result<u8, Error> {
         unsafe {
-            let leuart = Port::get_ptr();
-            if ((*leuart).STATUS & bindings::LEUART_STATUS_RXDATAV) == 0 {
+            if ((*self.leuart.ptr).STATUS & bindings::LEUART_STATUS_RXDATAV) == 0 {
                 return Err(nb::Error::WouldBlock);
             }
-            return Ok(bindings::LEUART_Rx(leuart));
+            return Ok(bindings::LEUART_Rx(self.leuart.ptr));
         }
     }
 }
 
-impl<Port> hal::serial::Write<u8> for Serial<Port>
-where
-    Port: LEUART,
-{
+impl hal::serial::Write<u8> for Serial {
     type Error = Error;
 
     fn flush(&mut self) -> nb::Result<(), Error> {
         unsafe {
-            let leuart = Port::get_ptr();
-            if ((*leuart).STATUS & bindings::LEUART_STATUS_TXC) != 0 {
+            if ((*self.leuart.ptr).STATUS & bindings::LEUART_STATUS_TXC) != 0 {
                 return Err(nb::Error::WouldBlock);
             }
 
@@ -162,12 +106,11 @@ where
 
     fn write(&mut self, byte: u8) -> nb::Result<(), Error> {
         unsafe {
-            let leuart = Port::get_ptr();
-            if ((*leuart).STATUS & bindings::LEUART_STATUS_TXBL) != 0 {
+            if ((*self.leuart.ptr).STATUS & bindings::LEUART_STATUS_TXBL) != 0 {
                 return Err(nb::Error::WouldBlock);
             }
 
-            bindings::LEUART_Tx(leuart, byte);
+            bindings::LEUART_Tx(self.leuart.ptr, byte);
 
             Ok(())
         }
