@@ -83,9 +83,6 @@ impl hal::serial::Read<u8> for Serial {
 
     fn read(&mut self) -> nb::Result<u8, Error> {
         unsafe {
-            if ((*self.leuart.ptr).STATUS & bindings::LEUART_STATUS_RXDATAV) == 0 {
-                return Err(nb::Error::WouldBlock);
-            }
             return Ok(bindings::LEUART_Rx(self.leuart.ptr));
         }
     }
@@ -96,20 +93,12 @@ impl hal::serial::Write<u8> for Serial {
 
     fn flush(&mut self) -> nb::Result<(), Error> {
         unsafe {
-            if ((*self.leuart.ptr).STATUS & bindings::LEUART_STATUS_TXC) != 0 {
-                return Err(nb::Error::WouldBlock);
-            }
-
             return Ok(());
         }
     }
 
     fn write(&mut self, byte: u8) -> nb::Result<(), Error> {
         unsafe {
-            if ((*self.leuart.ptr).STATUS & bindings::LEUART_STATUS_TXBL) != 0 {
-                return Err(nb::Error::WouldBlock);
-            }
-
             bindings::LEUART_Tx(self.leuart.ptr, byte);
 
             Ok(())
