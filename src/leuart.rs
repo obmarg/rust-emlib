@@ -106,7 +106,7 @@ impl hal::serial::Write<u8> for Serial {
     }
 }
 
-impl<Port> hal::blocking::serial::write::Default<u8> for Serial<Port> where Port: LEUART {}
+impl hal::blocking::serial::write::Default<u8> for Serial {}
 
 #[cfg(test)]
 mod tests {
