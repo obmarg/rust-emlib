@@ -1,4 +1,6 @@
-use hal::blocking::spi::Transfer;
+use core::ffi::c_void;
+
+use hal::blocking::spi::{Transfer, Write};
 use hal::spi::{Mode, Phase, Polarity};
 
 use super::bindings;
@@ -8,14 +10,14 @@ use super::bindings;
 /// Usually you'll take this from the Peripherals struct rather than creating it
 /// yourself.
 ///
-/// Note that in real life you could have multiple things attached to a USART,
-/// but for now this is unsupported in rust. Need to figure out how to share a
-/// USART while ensuring pins are not shared.
+/// Note that in real life you could have multiple things attached to a single
+/// USART instance, but for now this is unsupported in rust. Need to figure out  
+/// how to share a USART while ensuring pins are not shared.
 pub struct USART {
     pub(crate) ptr: *mut bindings::USART_TypeDef,
 }
 
-enum Pin {
+pub enum Pin {
     Pin0,
     Pin1,
     Pin2,
@@ -87,8 +89,10 @@ fn pin_to_number(pin: Pin) -> u8 {
     }
 }
 
+// TODO: should probably be a module specifically for SPI
+
 /// The pins on a USART to run our SPI on.
-struct SPIPins {
+pub struct SPIPins {
     /// The transmit pin
     tx: Pin,
     /// The receive pin
@@ -100,7 +104,7 @@ struct SPIPins {
 }
 
 /// The bit order for an SPI
-enum BitOrder {
+pub enum BitOrder {
     /// Most significant bit first
     MSBFirst,
     /// Least significant bit first
@@ -108,20 +112,31 @@ enum BitOrder {
 }
 
 /// Implements SPI on top of a USART.
-struct SPI {
+///
+/// Note that we don't support slave mode just now.
+pub struct SPI {
+    #[allow(dead_code)]
     port: USART,
-    handle_data: bindings::SPIDRV_HandleData
+    handle_data: bindings::SPIDRV_HandleData,
+}
+
+/// Errors that can happen when working with SPI.
+///
+/// Not really implemented properly just now.  Can do that later.
+pub enum SPIError {
+    Unknown(u32),
+    TransferTooBig,
 }
 
 impl SPI {
-    fn new(
+    pub fn new(
         port: USART,
         pins: SPIPins,
         bit_rate: u32,
         clock_mode: Mode,
         bit_order: BitOrder,
-    ) -> SPI {
-        let config = bindings::SPIDRV_Init {
+    ) -> Result<SPI, SPIError> {
+        let mut config = bindings::SPIDRV_Init {
             port: port.ptr,
             portLocationTx: pin_to_number(pins.tx),
             portLocationRx: pin_to_number(pins.rx),
@@ -150,22 +165,61 @@ impl SPI {
                 }
             },
             csControl: bindings::SPIDRV_CsControl_spidrvCsControlAuto,
-            slaveStartMode: bindings::SPIDRV_SlaveStart_spidrvSlaveStartImmediate
+            slaveStartMode: bindings::SPIDRV_SlaveStart_spidrvSlaveStartImmediate,
         };
 
         // TODO: Figure out if there's a better way to do this...
         // uninitialized sounds like a nightmare
-        let spi = unsafe {
-            let handle_data: bindings::SPIDRV_HandleData = unsafe { core::mem::uninitialized() };
-            match bindings::SPIDRV_Init(&handle_data, config) {
-                bindings::ECODE_OK => {
-                    SPI{port: port, handle_data: handle_data}
-                }
-                _ => {
-                    // TODO: handle errors
-                }
+        unsafe {
+            let mut handle_data: bindings::SPIDRV_HandleData = { core::mem::uninitialized() };
+            match bindings::SPIDRV_Init(&mut handle_data, &mut config) {
+                bindings::ECODE_OK => Ok(SPI {
+                    port: port,
+                    handle_data: handle_data,
+                }),
+                error => Err(SPIError::Unknown(error)),
             }
         }
-        spi
+    }
+}
+
+impl Transfer<u8> for SPI {
+    type Error = SPIError;
+
+    fn transfer<'w>(&mut self, words: &'w mut [u8]) -> Result<&'w [u8], Self::Error> {
+        if words.len() > (i32::max_value() as usize) {
+            return Err(SPIError::TransferTooBig);
+        }
+        match unsafe {
+            bindings::SPIDRV_MTransferB(
+                &mut self.handle_data,
+                words.as_ptr() as *const c_void,
+                words.as_mut_ptr() as *mut c_void,
+                words.len() as i32,
+            )
+        } {
+            bindings::ECODE_OK => Ok(words),
+            error => Err(SPIError::Unknown(error)),
+        }
+    }
+}
+
+impl Write<u8> for SPI {
+    type Error = SPIError;
+
+    fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
+        if words.len() > (i32::max_value() as usize) {
+            return Err(SPIError::TransferTooBig);
+        }
+        match unsafe {
+            bindings::SPIDRV_MTransmitB(
+                &mut self.handle_data,
+                words.as_ptr() as *const c_void,
+                words.len() as i32,
+            )
+        } {
+            bindings::ECODE_OK => Ok(()),
+            error => Err(SPIError::Unknown(error)),
+        }
     }
 }

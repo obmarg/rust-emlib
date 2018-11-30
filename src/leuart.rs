@@ -92,9 +92,7 @@ impl hal::serial::Write<u8> for Serial {
     type Error = Error;
 
     fn flush(&mut self) -> nb::Result<(), Error> {
-        unsafe {
-            return Ok(());
-        }
+        return Ok(());
     }
 
     fn write(&mut self, byte: u8) -> nb::Result<(), Error> {
