@@ -7,6 +7,7 @@ mod ctypes;
 pub mod leuart;
 pub mod peripherals;
 pub mod usart;
+pub mod interrupts;
 
 #[cfg(test)]
 mod tests {
