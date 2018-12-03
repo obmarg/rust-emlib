@@ -1,4 +1,5 @@
 use super::{hal, nb};
+use hal::blocking::serial::Write;
 
 use super::bindings;
 
@@ -105,6 +106,13 @@ impl hal::serial::Write<u8> for Serial {
 }
 
 impl hal::blocking::serial::write::Default<u8> for Serial {}
+
+impl core::fmt::Write for Serial {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        self.bwrite_all(s.as_bytes())
+            .map_err(|_| core::fmt::Error {})
+    }
+}
 
 #[cfg(test)]
 mod tests {

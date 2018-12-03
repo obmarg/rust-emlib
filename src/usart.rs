@@ -93,14 +93,15 @@ fn pin_to_number(pin: Pin) -> u8 {
 
 /// The pins on a USART to run our SPI on.
 pub struct SPIPins {
+    // TODO: Consider not having all of these as pub...
     /// The transmit pin
-    tx: Pin,
+    pub tx: Pin,
     /// The receive pin
-    rx: Pin,
+    pub rx: Pin,
     /// The clock pin
-    clk: Pin,
+    pub clk: Pin,
     /// The chip select pin
-    cs: Pin,
+    pub cs: Pin,
 }
 
 /// The bit order for an SPI
@@ -123,6 +124,7 @@ pub struct SPI {
 /// Errors that can happen when working with SPI.
 ///
 /// Not really implemented properly just now.  Can do that later.
+#[derive(Debug)]
 pub enum SPIError {
     Unknown(u32),
     TransferTooBig,

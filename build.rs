@@ -202,20 +202,21 @@ fn device_family() -> Option<String> {
 
 fn emlib_source_files() -> impl Iterator<Item = String> {
     [
-        "em_gpio.c",
         "em_adc.c",
         "em_cmu.c",
-        "em_msc.c",
+        "em_core.c",
         "em_cryotimer.c",
-        "em_rtcc.c",
-        "em_system.c",
-        "em_leuart.c",
-        "em_usart.c",
+        "em_emu.c",
+        "em_gpio.c",
         "em_ldma.c",
         "em_letimer.c",
-        "em_wdog.c",
+        "em_leuart.c",
+        "em_msc.c",
         "em_rmu.c",
-        "em_emu.c",
+        "em_rtcc.c",
+        "em_system.c",
+        "em_usart.c",
+        "em_wdog.c",
     ]
         .iter()
         .map(|p| format!("vendor/emlib/src/{}", p))
